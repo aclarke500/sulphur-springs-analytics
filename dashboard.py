@@ -117,15 +117,32 @@ col1, col2, col3 = st.columns(3)
 # Chip Elapsed Time Distribution
 with col1:
     st.subheader("Chip Elapsed Time Distribution")
+    # Convert chip_time_sec to H:MM for x-axis labels
+    def sec_to_hm(s):
+        h = int(s) // 3600
+        m = (int(s) % 3600) // 60
+        return f"{h}:{m:02d}"
+    bin_size_time = 120  # 2 minute bins
+    min_time = int(df['chip_time_sec'].min())
+    max_time = int(df['chip_time_sec'].max())
+    bins_time = list(range(min_time, max_time + bin_size_time, bin_size_time))
     fig_time = px.histogram(df, x='chip_time_sec', 
+                           nbins=len(bins_time),
                            title="Distribution of Finish Times",
-                           labels={'chip_time_sec': 'Time (seconds)'})
-    # Add lines for each selected runner
+                           labels={'chip_time_sec': 'Time (hours:minutes)'})
     for _, runner in selected_runners.iterrows():
         fig_time.add_vline(x=runner['chip_time_sec'], 
                           line_dash="dash", 
                           line_color="red",
                           annotation_text=runner['name'])
+    # X-ticks every 15 minutes
+    tickvals_time = list(range(min_time, max_time + 1, 900))
+    ticktext_time = [sec_to_hm(s) for s in tickvals_time]
+    fig_time.update_xaxes(
+        tickvals=tickvals_time,
+        ticktext=ticktext_time,
+        tickangle=45
+    )
     st.plotly_chart(fig_time, use_container_width=True)
 
 # Overall Pace Distribution
@@ -186,6 +203,23 @@ with col3:
     st.metric("Average Pace", f"{df['pace_sec'].mean()/60:.1f} min/km")
 with col4:
     st.metric("Average Age", f"{df['age'].mean():.1f} years")
+
+# Correlation between pace and age
+st.subheader("Correlation Between Pace and Age")
+if df['age'].notnull().sum() > 0:
+    corr = df[['pace_sec', 'age']].corr().loc['pace_sec', 'age']
+    st.write(f"Correlation coefficient (Pace vs. Age): **{corr:.2f}**")
+    # Scatter plot
+    fig_corr = px.scatter(df, x='age', y='pace_sec',
+                         labels={'age': 'Age', 'pace_sec': 'Pace (s/km)'},
+                         title='Age vs. Pace')
+    fig_corr.update_yaxes(
+        tickvals=[i*60 for i in range(int(df['pace_sec'].min()//60), int(df['pace_sec'].max()//60)+1)],
+        ticktext=[f"{i}:{0:02d}" for i in range(int(df['pace_sec'].min()//60), int(df['pace_sec'].max()//60)+1)]
+    )
+    st.plotly_chart(fig_corr, use_container_width=True)
+else:
+    st.write("Not enough age data to compute correlation.")
 
 # Show full results table
 st.subheader("Full Results")
