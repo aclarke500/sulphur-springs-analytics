@@ -90,7 +90,7 @@ df = load_data(race_file)
 
 # Sidebar: Multi-runner selection
 all_names = df['name'].drop_duplicates().sort_values().tolist()
-def_name = all_names[0:1] if all_names else []
+def_name = []  # Do not prepopulate any names
 selected_names = st.sidebar.multiselect(
     "Compare runners (select one or more):",
     options=all_names,
