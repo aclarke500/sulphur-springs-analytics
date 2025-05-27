@@ -8,7 +8,7 @@ with sync_playwright() as p:
     page = browser.new_page()
 
     for page_num in range(1, 6):  # pages 1 to 4
-        url = f"https://results.raceroster.com/v2/en-CA/results/s9v6cbyg2c3m6kps/results?subEvent=229192&page={page_num}"
+        url = f"https://results.raceroster.com/v2/en-CA/results/s9v6cbyg2c3m6kps/results?subEvent=229240&page={page_num}"
         page.goto(url)
         page.wait_for_selector('table')  # wait until the table loads
 
@@ -44,4 +44,4 @@ print(df.head())
 
 # Save to CSV
 df.to_csv('10k_race_results.csv', index=False)
-print("Data has been saved to 20k_race_results.csv")
+print("Data has been saved to 10k_race_results.csv")
