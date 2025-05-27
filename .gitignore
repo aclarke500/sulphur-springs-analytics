@@ -41,7 +41,6 @@ htmlcov/
 
 # Distribution
 *.log
-*.csv
 *.dat
 *.out
 *.pid

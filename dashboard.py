@@ -26,6 +26,8 @@ column_maps = {
         'name': 'Full Name',
         'gender': 'Gender',
         'age': 'Age',
+        'city': 'City',
+        'lap_count': 'Lap Count',
         'gun_time': 'Gun Elapsed Time',
         'chip_time': 'Chip Elapsed Time',
         'pace': 'Overall Pace',
@@ -47,7 +49,7 @@ column_maps = {
 # Load the data
 @st.cache_data
 def load_data(race_file):
-    df = pd.read_csv(race_file)
+    df = pd.read_csv(race_file, dtype=str)
     col_map = column_maps[race_file]
     # Standardize columns for internal use
     df_std = pd.DataFrame()
@@ -56,12 +58,28 @@ def load_data(race_file):
             df_std[key] = df[col]
         else:
             df_std[key] = None
+    # Prune out anyone whose Lap Count is 0 (did not finish)
+    if 'lap_count' in df_std.columns:
+        df_std = df_std[df_std['lap_count'] != '0']
     # Parse chip time
     df_std['chip_time_sec'] = pd.to_datetime(df_std['chip_time'], format='%H:%M:%S', errors='coerce')
     df_std = df_std.dropna(subset=['chip_time_sec'])
     df_std['chip_time_sec'] = df_std['chip_time_sec'].dt.hour * 3600 + df_std['chip_time_sec'].dt.minute * 60 + df_std['chip_time_sec'].dt.second
-    # Parse pace
-    df_std['pace_sec'] = df_std['pace'].apply(lambda x: int(x.split(':')[0]) * 60 + int(x.split(':')[1]) if pd.notnull(x) and ':' in str(x) else None)
+    # Parse pace robustly
+    def pace_to_sec(x):
+        try:
+            if pd.isnull(x) or ':' not in str(x):
+                return None
+            parts = str(x).split(':')
+            if len(parts) == 2:
+                return int(parts[0]) * 60 + int(parts[1])
+            elif len(parts) == 3:  # In case of HH:MM:SS
+                return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+            else:
+                return None
+        except Exception:
+            return None
+    df_std['pace_sec'] = df_std['pace'].apply(pace_to_sec)
     df_std = df_std.dropna(subset=['pace_sec'])
     df_std['pace_min_per_km'] = df_std['pace_sec'].apply(lambda s: f"{int(s)//60}:{int(s)%60:02d}")
     # Age as int
